@@ -1,0 +1,96 @@
+﻿<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Signature Maker</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px
+        }
+
+        label {
+            display: block;
+            margin-top: 10px
+        }
+
+        #colorBox {
+            width: 100px;
+            height: 50px;
+            margin-top: 10px;
+            border: 1px solid #000
+        }
+
+        pre {
+            white-space: pre;
+            margin: 6px 0 0 0;
+            padding: 8px;
+            background: #f4f4f4;
+            border: 1px solid #eee
+        }
+    </style>
+</head>
+<body>
+    <h2>Signature Maker</h2>
+
+    <label>
+        Họ tên:
+        <input type="text" id="fullName" value="">
+    </label>
+
+    <label>
+        Ngày sinh (dd/MM/yyyy):
+        <input type="text" id="dob" placeholder="12/10/2003" value="">
+    </label>
+
+    <button id="btn">Khởi tạo</button>
+
+    <h3>Kết quả:</h3>
+    <div id="result"></div>
+    <div id="colorBox"></div>
+
+    <script>
+        (function () {
+            var btn = document.getElementById('btn');
+            btn.onclick = function () {
+                var name = (document.getElementById('fullName').value || "").replace(/^\s+|\s+$/g, '');
+                var dob = (document.getElementById('dob').value || "").replace(/^\s+|\s+$/g, '');
+
+                var body = "fullName=" + encodeURIComponent(name) + "&dob=" + encodeURIComponent(dob);
+
+                fetch("api.aspx", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8" },
+                    body: body
+                })
+                    .then(function (r) { return r.text(); })
+                    .then(function (t) {
+                        // tránh lỗi '<' (server trả về HTML lỗi) -> ném lỗi có ngữ cảnh
+                        if (t.length && t[0] === '<') throw new Error("Server trả về HTML (có thể lỗi parser). Nội dung: " + t.slice(0, 120));
+                        var data = JSON.parse(t);
+
+                        var res = document.getElementById('result');
+                        var html = ''
+                            + '<p><b>Bí danh:</b> ' + escapeHtml(data.slug || '') + '</p>'
+                            + '<p><b>Mã số:</b> ' + (data.numericId || 0) + '</p>'
+                            + '<p><b>Châm ngôn:</b> ' + escapeHtml(data.motto || '') + '</p>'
+                            + '<p><b>Pattern:</b></p>'
+                            + '<pre>' + escapeHtml((data.pattern || '').replace(/\r/g, '')) + '</pre>'
+                            + '<p><b>Màu may mắn:</b> <span id="hex">' + escapeHtml(data.color || '') + '</span></p>';
+                        res.innerHTML = html;
+
+                        var box = document.getElementById('colorBox');
+                        box.style.background = data.color || '#ffffff';
+                    })
+                    .catch(function (err) {
+                        alert("Lỗi: " + err.message);
+                    });
+            };
+
+            function escapeHtml(s) {
+                return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+            }
+        })();
+    </script>
+</body>
+</html>
